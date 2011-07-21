@@ -43,8 +43,11 @@
     var xAxis = options.axis == 'x',
         cssDirection = xAxis ? 'left' : 'top',
         sSize = xAxis ? 'Width' : 'Height';
-    var iScroll, scrollSize, offscreenSize, contentRatio, scrollbarRatio, iPosition = { start: 0, now: 0 }, iMouse = {};
+    var iScroll, scrollSize, offscreenSize, scrollbarRatio, iPosition = { start: 0, now: 0 }, iMouse = {};
 
+    this.active = function() {
+      return self.contentRatio < 1;
+    }
     function initialize() {
       self.update();
       setEvents();
@@ -54,15 +57,15 @@
       var viewportSize = viewport[0]['offset'+ sSize];
       var contentSize = content[0]['scroll'+ sSize];
       offscreenSize = contentSize - viewportSize;
-      contentRatio = viewportSize / contentSize;
-      scrollbar.toggleClass('disable', contentRatio >= 1);
+      self.contentRatio = viewportSize / contentSize;
+      scrollbar.toggleClass('disable', !self.active());
       var trackSize = options.size == 'auto' ? viewportSize : options.size;
-      var thumbSize = Math.min(trackSize, Math.max(0, ( options.sizethumb == 'auto' ? (trackSize * contentRatio) : options.sizethumb )));
+      var thumbSize = Math.min(trackSize, Math.max(0, ( options.sizethumb == 'auto' ? (trackSize * self.contentRatio) : options.sizethumb )));
       scrollSize = trackSize - thumbSize;
       scrollbarRatio = options.sizethumb == 'auto' ? (contentSize / trackSize) : offscreenSize / scrollSize;
-      if (contentRatio <= 1 && sScroll == 'relative') {
+      if (self.active() && sScroll == 'relative') {
         iScroll = Math.min(offscreenSize, Math.max(0, iScroll));
-      } else if (contentRatio <= 1 && sScroll == 'bottom') {
+      } else if (self.active() <= 1 && sScroll == 'bottom') {
         iScroll = offscreenSize
       } else {
         iScroll = isNaN(parseInt(sScroll)) ? 0 : parseInt(sScroll)
@@ -110,7 +113,7 @@
       return false;
     };
     function wheel(event){
-      if(contentRatio < 1){
+      if(self.active()){
         event = $.event.fix(event || window.event);
         var iDelta = event.wheelDelta ? event.wheelDelta/120 : -event.detail/3;
         iScroll -= iDelta * options.wheel;
@@ -127,7 +130,7 @@
       return false;
     };
     function drag(event){
-      if(contentRatio < 1){
+      if(self.active()){
         iPosition.now = Math.min(scrollSize, Math.max(0, (iPosition.start + ((xAxis ? event.pageX : event.pageY) - iMouse.start))));
         iScroll = iPosition.now * scrollbarRatio;
         content.css(cssDirection, -iScroll);
