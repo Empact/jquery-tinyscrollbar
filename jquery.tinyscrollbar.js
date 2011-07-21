@@ -103,7 +103,7 @@
       return false;
     };
     function wheel(oEvent){
-      if(!(oContent.ratio >= 1)){
+      if(oContent.ratio < 1){
         oEvent = $.event.fix(oEvent || window.event);
         var iDelta = oEvent.wheelDelta ? oEvent.wheelDelta/120 : -oEvent.detail/3;
         iScroll -= iDelta * options.wheel;
@@ -121,7 +121,7 @@
       return false;
     };
     function drag(oEvent){
-      if(!(oContent.ratio >= 1)){
+      if(oContent.ratio < 1){
         iPosition.now = Math.min((oTrack[options.axis] - oThumb[options.axis]), Math.max(0, (iPosition.start + ((sAxis ? oEvent.pageX : oEvent.pageY) - iMouse.start))));
         iScroll = iPosition.now * oScrollbar.ratio;
         oContent.obj.css(sDirection, -iScroll);
