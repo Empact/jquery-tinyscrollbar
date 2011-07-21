@@ -35,15 +35,15 @@
   function Scrollbar(root, options){
     var self = this;
     var wrapper = root;
-    var viewport = { obj: $('.viewport', root) };
-    var content = { obj: $('.overview', root) };
-    var scrollbar = { obj: $('.scrollbar', root) };
-    var track = { obj: $('.track', scrollbar.obj) };
-    var thumb = { obj: $('.thumb', scrollbar.obj) };
+    var viewport = $('.viewport', root);
+    var content = $('.overview', root);
+    var scrollbar = $('.scrollbar', root);
+    var track = $('.track', scrollbar);
+    var thumb = $('.thumb', scrollbar);
     var xAxis = options.axis == 'x',
         cssDirection = xAxis ? 'left' : 'top',
         sSize = xAxis ? 'Width' : 'Height';
-    var iScroll, iPosition = { start: 0, now: 0 }, iMouse = {};
+    var iScroll, scrollSize, offscreenSize, contentRatio, scrollbarRatio, iPosition = { start: 0, now: 0 }, iMouse = {};
 
     function initialize() {
       self.update();
@@ -51,35 +51,40 @@
       return self;
     }
     this.update = function(sScroll){
-      viewport[options.axis] = viewport.obj[0]['offset'+ sSize];
-      content[options.axis] = content.obj[0]['scroll'+ sSize];
-      content.ratio = viewport[options.axis] / content[options.axis];
-      scrollbar.obj.toggleClass('disable', content.ratio >= 1);
-      track[options.axis] = options.size == 'auto' ? viewport[options.axis] : options.size;
-      thumb[options.axis] = Math.min(track[options.axis], Math.max(0, ( options.sizethumb == 'auto' ? (track[options.axis] * content.ratio) : options.sizethumb )));
-      scrollbar.ratio = options.sizethumb == 'auto' ? (content[options.axis] / track[options.axis]) : (content[options.axis] - viewport[options.axis]) / (track[options.axis] - thumb[options.axis]);
-      iScroll = (sScroll == 'relative' && content.ratio <= 1) ? Math.min((content[options.axis] - viewport[options.axis]), Math.max(0, iScroll)) : 0;
-      iScroll = (sScroll == 'bottom' && content.ratio <= 1) ? (content[options.axis] - viewport[options.axis]) : isNaN(parseInt(sScroll)) ? iScroll : parseInt(sScroll);
-      setSize();
-    };
-    function setSize(){
-      thumb.obj.css(cssDirection, iScroll / scrollbar.ratio);
-      content.obj.css(cssDirection, -iScroll);
-      iMouse['start'] = thumb.obj.offset()[cssDirection];
+      var viewportSize = viewport[0]['offset'+ sSize];
+      var contentSize = content[0]['scroll'+ sSize];
+      offscreenSize = contentSize - viewportSize;
+      contentRatio = viewportSize / contentSize;
+      scrollbar.toggleClass('disable', contentRatio >= 1);
+      var trackSize = options.size == 'auto' ? viewportSize : options.size;
+      var thumbSize = Math.min(trackSize, Math.max(0, ( options.sizethumb == 'auto' ? (trackSize * contentRatio) : options.sizethumb )));
+      scrollSize = trackSize - thumbSize;
+      scrollbarRatio = options.sizethumb == 'auto' ? (contentSize / trackSize) : offscreenSize / scrollSize;
+      if (contentRatio <= 1 && sScroll == 'relative') {
+        iScroll = Math.min(offscreenSize, Math.max(0, iScroll));
+      } else if (contentRatio <= 1 && sScroll == 'bottom') {
+        iScroll = offscreenSize
+      } else {
+        iScroll = isNaN(parseInt(sScroll)) ? 0 : parseInt(sScroll)
+      }
+
+      thumb.css(cssDirection, iScroll / scrollbarRatio);
+      content.css(cssDirection, -iScroll);
+      iMouse['start'] = thumb.offset()[cssDirection];
       var sCssSize = sSize.toLowerCase();
-      scrollbar.obj.css(sCssSize, track[options.axis]);
-      track.obj.css(sCssSize, track[options.axis]);
-      thumb.obj.css(sCssSize, thumb[options.axis]);
+      scrollbar.css(sCssSize, trackSize);
+      track.css(sCssSize, trackSize);
+      thumb.css(sCssSize, thumbSize);
     };
     function setEvents(){
-      thumb.obj.bind('mousedown', start);
-      thumb.obj[0].ontouchstart = function(event){
+      thumb.bind('mousedown', start);
+      thumb[0].ontouchstart = function(event){
         event.preventDefault();
-        thumb.obj.unbind('mousedown');
+        thumb.unbind('mousedown');
         start(event.touches[0]);
         return false;
       };
-      track.obj.bind('mouseup', drag);
+      track.bind('mouseup', drag);
       if(options.scroll && this.addEventListener){
         wrapper[0].addEventListener('DOMMouseScroll', wheel, false);
         wrapper[0].addEventListener('mousewheel', wheel, false );
@@ -88,7 +93,7 @@
     };
     function start(event){
       iMouse.start = xAxis ? event.pageX : event.pageY;
-      var thumbDir = parseInt(thumb.obj.css(cssDirection));
+      var thumbDir = parseInt(thumb.css(cssDirection));
       iPosition.start = thumbDir == 'auto' ? 0 : thumbDir;
       $(document).bind('mousemove', drag);
       document.ontouchmove = function(event){
@@ -96,37 +101,37 @@
         drag(event.touches[0]);
       };
       $(document).bind('mouseup', end);
-      thumb.obj.bind('mouseup', end);
-      thumb.obj[0].ontouchend = document.ontouchend = function(event){
+      thumb.bind('mouseup', end);
+      thumb[0].ontouchend = document.ontouchend = function(event){
         $(document).unbind('mouseup');
-        thumb.obj.unbind('mouseup');
+        thumb.unbind('mouseup');
         end(event.touches[0]);
       };
       return false;
     };
     function wheel(event){
-      if(content.ratio < 1){
+      if(contentRatio < 1){
         event = $.event.fix(event || window.event);
         var iDelta = event.wheelDelta ? event.wheelDelta/120 : -event.detail/3;
         iScroll -= iDelta * options.wheel;
-        iScroll = Math.min((content[options.axis] - viewport[options.axis]), Math.max(0, iScroll));
-        thumb.obj.css(cssDirection, iScroll / scrollbar.ratio);
-        content.obj.css(cssDirection, -iScroll);
+        iScroll = Math.min(offscreenSize, Math.max(0, iScroll));
+        thumb.css(cssDirection, iScroll / scrollbarRatio);
+        content.css(cssDirection, -iScroll);
         event.preventDefault();
       };
     };
     function end(event){
       $(document).unbind('mousemove', drag).unbind('mouseup', end);
-      thumb.obj.unbind('mouseup', end);
-      document.ontouchmove = thumb.obj[0].ontouchend = document.ontouchend = null;
+      thumb.unbind('mouseup', end);
+      document.ontouchmove = thumb[0].ontouchend = document.ontouchend = null;
       return false;
     };
     function drag(event){
-      if(content.ratio < 1){
-        iPosition.now = Math.min((track[options.axis] - thumb[options.axis]), Math.max(0, (iPosition.start + ((xAxis ? event.pageX : event.pageY) - iMouse.start))));
-        iScroll = iPosition.now * scrollbar.ratio;
-        content.obj.css(cssDirection, -iScroll);
-        thumb.obj.css(cssDirection, iPosition.now);
+      if(contentRatio < 1){
+        iPosition.now = Math.min(scrollSize, Math.max(0, (iPosition.start + ((xAxis ? event.pageX : event.pageY) - iMouse.start))));
+        iScroll = iPosition.now * scrollbarRatio;
+        content.css(cssDirection, -iScroll);
+        thumb.css(cssDirection, iPosition.now);
       }
       return false;
     };
