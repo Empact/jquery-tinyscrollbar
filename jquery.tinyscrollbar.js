@@ -49,6 +49,10 @@
       return self.contentRatio < 1;
     }
     function initialize() {
+      if (!(viewport.length && content.length && scrollbar.length && track.length && thumb.length)) {
+        return null;
+      }
+
       self.update();
       setEvents();
       return self;
