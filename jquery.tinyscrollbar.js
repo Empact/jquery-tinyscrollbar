@@ -48,16 +48,21 @@
     this.active = function() {
       return self.contentRatio < 1;
     }
-    function initialize() {
-      if (!(viewport.length && content.length && scrollbar.length && track.length && thumb.length)) {
-        return null;
-      }
+    function requirements_met() {
+      return (viewport.length && content.length && scrollbar.length && track.length && thumb.length)
+    }
 
-      self.update();
-      setEvents();
+    function initialize() {
+      if (requirements_met()) {
+        self.update();
+        setEvents();
+      }
       return self;
     }
     this.update = function(sScroll){
+      if (!requirements_met()) {
+        $.error("Missing required tinyscrollbar sub-element: either .viewport .overview .scrollbar .track or .thumb");
+      }
       var viewportSize = viewport[0]['offset'+ sSize];
       var contentSize = content[0]['scroll'+ sSize];
       offscreenSize = contentSize - viewportSize;
