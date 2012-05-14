@@ -21,7 +21,8 @@
       wheel: 40,  //how many pixels must the mouswheel scroll at a time.
       scroll: true, //enable or disable the mousewheel;
       size: 'auto', //set the size of the scrollbar to auto or a fixed number.
-      sizethumb: 'auto' //set the size of the thumb to auto or a fixed number.
+      sizethumb: 'auto', //set the size of the thumb to auto or a fixed number.
+      events: true // enable or disable events
     }
   };
 
@@ -119,6 +120,8 @@
         thumb.unbind('mouseup');
         end(event.touches[0]);
       };
+      if (options.events)
+        content.trigger('tinyscrollStart');
       return false;
     };
     function wheel(event){
@@ -129,6 +132,8 @@
         iScroll = Math.min(offscreenSize, Math.max(0, iScroll));
         thumb.css(cssDirection, iScroll / scrollbarRatio);
         content.css(cssDirection, -iScroll);
+        if (options.events)
+          content.trigger('tinyscroll');
         event.preventDefault();
       };
     };
@@ -136,6 +141,8 @@
       $(document).unbind('mousemove', drag).unbind('mouseup', end);
       thumb.unbind('mouseup', end);
       document.ontouchmove = thumb[0].ontouchend = document.ontouchend = null;
+      if (options.events)
+        content.trigger('tinyscrollEnd');
       return false;
     };
     function drag(event){
@@ -144,6 +151,8 @@
         iScroll = iPosition.now * scrollbarRatio;
         content.css(cssDirection, -iScroll);
         thumb.css(cssDirection, iPosition.now);
+        if (options.events)
+          content.trigger('tinyscroll');
       }
       return false;
     };
