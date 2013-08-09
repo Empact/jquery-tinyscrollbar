@@ -22,6 +22,7 @@
 			wheel: 40,  //how many pixels must the mouswheel scroll at a time.
 			scroll: true, //enable or disable the mousewheel;
 			arrows: 40, //how many pixels should move the scroll on a arrow click, false to disable.
+			arrowsSpeed: 70, //if mouse button is down, what speed (milliseconds) you want the loop to repeat
 			size: 'auto', //set the size of the scrollbar to auto or a fixed number.
 			sizethumb: 'auto' //set the size of the thumb to auto or a fixed number.
 		}
@@ -63,7 +64,7 @@
 		var sAxis = options.axis == 'x', sDirection = sAxis ? 'left' : 'top', sSize = sAxis ? 'Width' : 'Height';
 		var iScroll, iPosition = { start: 0, now: 0 }, iMouse = {};
 		var reverse = false;
-
+		var timeout = null;
 		function initialize() {	
 			oSelf.update();
 			setEvents();
@@ -114,8 +115,8 @@
 			oTrack.obj.bind('mouseup', drag);
 			if(options.arrows)
 			{
-				oUpArrow.obj.bind('mousedown', up);
-				oDownArrow.obj.bind('mousedown', down);
+				oUpArrow.obj.bind('mousedown', up).bind('mouseup mouseleave',endArrow);
+				oDownArrow.obj.bind('mousedown', down).bind('mouseup mouseleave',endArrow);
 			}
 			if(options.scroll && this.addEventListener){
 				oWrapper[0].addEventListener('DOMMouseScroll', wheel, false);
@@ -156,31 +157,40 @@
 		};
 		function up(oEvent){
 			if(!(oContent.ratio >= 1)){
-				iScroll -= options.arrows;
-				iScroll = Math.min((oContent[options.axis] - oViewport[options.axis]), Math.max(0, iScroll));
-				oThumb.obj.css(sDirection, iScroll / oScrollbar.ratio);
-				oContent.obj.css(sDirection, -iScroll);
+				timeout = setInterval(function(){
+					iScroll -= options.arrows;
+					iScroll = Math.min((oContent[options.axis] - oViewport[options.axis]), Math.max(0, iScroll));
+					oThumb.obj.css(sDirection, iScroll / oScrollbar.ratio);
+					oContent.obj.css(sDirection, -iScroll);
 
-				oEvent = $.event.fix(oEvent);
-				oEvent.preventDefault();
+					oEvent = $.event.fix(oEvent);
+					oEvent.preventDefault();
+				},options.arrowsSpeed);
 			}
 		}
 		function down(oEvent){
 			if(!(oContent.ratio >= 1)){
-				iScroll += options.arrows;
-				iScroll = Math.min((oContent[options.axis] - oViewport[options.axis]), Math.max(0, iScroll));
-				oThumb.obj.css(sDirection, iScroll / oScrollbar.ratio);
-				oContent.obj.css(sDirection, -iScroll);
-
-				oEvent = $.event.fix(oEvent);
-				oEvent.preventDefault();
+				timeout = setInterval(function(){
+					iScroll += options.arrows;
+					iScroll = Math.min((oContent[options.axis] - oViewport[options.axis]), Math.max(0, iScroll));
+					oThumb.obj.css(sDirection, iScroll / oScrollbar.ratio);
+					oContent.obj.css(sDirection, -iScroll);
+					oEvent = $.event.fix(oEvent);
+					oEvent.preventDefault();
+				},options.arrowsSpeed);
+				
 			}
+		}
+		function endArrow(oEvent)
+		{
+			clearInterval(timeout);
 		}
 		function end(oEvent){
 			$(document).unbind('mousemove', drag);
 			$(document).unbind('mouseup', end);
 			oThumb.obj.unbind('mouseup', end);
 			document.ontouchmove = oThumb.obj[0].ontouchend = document.ontouchend = null;
+			clearInterval(timeout)
 			return false;
 		};
 		function drag(oEvent){
