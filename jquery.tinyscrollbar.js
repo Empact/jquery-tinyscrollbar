@@ -21,6 +21,7 @@
 			axis: 'y', // vertical or horizontal scrollbar? ( x || y ).
 			wheel: 40,  //how many pixels must the mouswheel scroll at a time.
 			scroll: true, //enable or disable the mousewheel;
+			lockscroll : true,   // return scrollwheel to browser if there is no more content.
 			arrows: 40, //how many pixels should move the scroll on a arrow click, false to disable.
 			arrowsSpeed: 70, //if mouse button is down, what speed (milliseconds) you want the loop to repeat
 			size: 'auto', //set the size of the scrollbar to auto or a fixed number.
@@ -52,19 +53,19 @@
 	$.fn.tinyscrollbar_update = function(sScroll, duration) { return $(this).data('tsb').update(sScroll, duration); };
 	
 	function Scrollbar(root, options){
-		var oSelf = this;
-		var oWrapper = root;
-		var oViewport = { obj: $('.viewport', root) };
-		var oContent = { obj: $('.overview', root) };
-		var oScrollbar = { obj: $('.scrollbar', root) };
-		var oTrack = { obj: $('.track', oScrollbar.obj) };
-		var oUpArrow = { obj: $('.uparrow', oScrollbar.obj) };
-		var oDownArrow = { obj: $('.downarrow', oScrollbar.obj) };
-		var oThumb = { obj: $('.thumb', oScrollbar.obj) };
-		var sAxis = options.axis == 'x', sDirection = sAxis ? 'left' : 'top', sSize = sAxis ? 'Width' : 'Height';
-		var iScroll, iPosition = { start: 0, now: 0 }, iMouse = {};
-		var reverse = false;
-		var timeout = null;
+		var oSelf = this,
+		oWrapper = root,
+		oViewport = { obj: $('.viewport', root) },
+		oContent = { obj: $('.overview', root) },
+		oScrollbar = { obj: $('.scrollbar', root) },
+		oTrack = { obj: $('.track', oScrollbar.obj) },
+		oUpArrow = { obj: $('.uparrow', oScrollbar.obj) },
+		oDownArrow = { obj: $('.downarrow', oScrollbar.obj) },
+		oThumb = { obj: $('.thumb', oScrollbar.obj) },
+		sAxis = options.axis == 'x', sDirection = sAxis ? 'left' : 'top', sSize = sAxis ? 'Width' : 'Height',
+		iScroll, iPosition = { start: 0, now: 0 }, iMouse = {},
+		reverse = false,
+		timeout = null;
 		function initialize() {	
 			oSelf.update();
 			setEvents();
@@ -150,9 +151,11 @@
 				iScroll = Math.min((oContent[options.axis] - oViewport[options.axis]), Math.max(0, iScroll));
 				oThumb.obj.css(sDirection, iScroll / oScrollbar.ratio);
 				oContent.obj.css(sDirection, -iScroll);
-				
-				oEvent = $.event.fix(oEvent);
-				oEvent.preventDefault();
+				if( options.lockscroll || ( iScroll !== ( oContent[ options.axis ] - oViewport[ options.axis ] ) && iScroll !== 0 ) )
+                {
+					oEvent = $.event.fix(oEvent);
+					oEvent.preventDefault();
+				}
 			};
 		};
 		function up(oEvent){
@@ -163,8 +166,11 @@
 					oThumb.obj.css(sDirection, iScroll / oScrollbar.ratio);
 					oContent.obj.css(sDirection, -iScroll);
 
-					oEvent = $.event.fix(oEvent);
-					oEvent.preventDefault();
+					if( options.lockscroll || ( iScroll !== ( oContent[ options.axis ] - oViewport[ options.axis ] ) && iScroll !== 0 ) )
+	                {
+						oEvent = $.event.fix(oEvent);
+						oEvent.preventDefault();
+					}
 				},options.arrowsSpeed);
 			}
 		}
@@ -175,8 +181,11 @@
 					iScroll = Math.min((oContent[options.axis] - oViewport[options.axis]), Math.max(0, iScroll));
 					oThumb.obj.css(sDirection, iScroll / oScrollbar.ratio);
 					oContent.obj.css(sDirection, -iScroll);
-					oEvent = $.event.fix(oEvent);
-					oEvent.preventDefault();
+					if( options.lockscroll || ( iScroll !== ( oContent[ options.axis ] - oViewport[ options.axis ] ) && iScroll !== 0 ) )
+	                {
+						oEvent = $.event.fix(oEvent);
+						oEvent.preventDefault();
+					}
 				},options.arrowsSpeed);
 				
 			}
