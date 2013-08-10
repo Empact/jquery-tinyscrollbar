@@ -10,6 +10,7 @@
  * Date: 13 / 11 / 2011
  * Depends on library: jQuery
  * 
+ * Source of this fork https://github.com/CGeorges/jquery-tinyscrollbar
  */
 
 (function($){
@@ -20,6 +21,9 @@
 			axis: 'y', // vertical or horizontal scrollbar? ( x || y ).
 			wheel: 40,  //how many pixels must the mouswheel scroll at a time.
 			scroll: true, //enable or disable the mousewheel;
+			lockscroll : true,   // return scrollwheel to browser if there is no more content.
+			arrows: 40, //how many pixels should move the scroll on a arrow click, false to disable.
+			arrowsSpeed: 70, //if mouse button is down, what speed (milliseconds) you want the loop to repeat
 			size: 'auto', //set the size of the scrollbar to auto or a fixed number.
 			sizethumb: 'auto' //set the size of the thumb to auto or a fixed number.
 		}
@@ -29,7 +33,7 @@
 		if (options && options.axis == 'x') var horizontal = true;
 		this.wrapInner('<div class="viewport"><div class="overview">');
 		var width = this.width();
-		var height = this.height();
+		var height = this.height();	
 		this.append('<div class="scrollbar"><div class="track"><div class="thumb"><div class="end"></div></div></div></div>');
 		if (horizontal) {
 			this.find('.viewport').width(width).height(height-15);
@@ -49,17 +53,19 @@
 	$.fn.tinyscrollbar_update = function(sScroll, duration) { return $(this).data('tsb').update(sScroll, duration); };
 	
 	function Scrollbar(root, options){
-		var oSelf = this;
-		var oWrapper = root;
-		var oViewport = { obj: $('.viewport', root) };
-		var oContent = { obj: $('.overview', root) };
-		var oScrollbar = { obj: $('.scrollbar', root) };
-		var oTrack = { obj: $('.track', oScrollbar.obj) };
-		var oThumb = { obj: $('.thumb', oScrollbar.obj) };
-		var sAxis = options.axis == 'x', sDirection = sAxis ? 'left' : 'top', sSize = sAxis ? 'Width' : 'Height';
-		var iScroll, iPosition = { start: 0, now: 0 }, iMouse = {};
-		var reverse = false;
-
+		var oSelf = this,
+		oWrapper = root,
+		oViewport = { obj: $('.viewport', root) },
+		oContent = { obj: $('.overview', root) },
+		oScrollbar = { obj: $('.scrollbar', root) },
+		oTrack = { obj: $('.track', oScrollbar.obj) },
+		oUpArrow = { obj: $('.uparrow', oScrollbar.obj) },
+		oDownArrow = { obj: $('.downarrow', oScrollbar.obj) },
+		oThumb = { obj: $('.thumb', oScrollbar.obj) },
+		sAxis = options.axis == 'x', sDirection = sAxis ? 'left' : 'top', sSize = sAxis ? 'Width' : 'Height',
+		iScroll, iPosition = { start: 0, now: 0 }, iMouse = {},
+		reverse = false,
+		timeout = null;
 		function initialize() {	
 			oSelf.update();
 			setEvents();
@@ -108,6 +114,11 @@
 				return false;
 			};
 			oTrack.obj.bind('mouseup', drag);
+			if(options.arrows)
+			{
+				oUpArrow.obj.bind('mousedown', up).bind('mouseup mouseleave',endArrow);
+				oDownArrow.obj.bind('mousedown', down).bind('mouseup mouseleave',endArrow);
+			}
 			if(options.scroll && this.addEventListener){
 				oWrapper[0].addEventListener('DOMMouseScroll', wheel, false);
 				oWrapper[0].addEventListener('mousewheel', wheel, false );
@@ -140,16 +151,55 @@
 				iScroll = Math.min((oContent[options.axis] - oViewport[options.axis]), Math.max(0, iScroll));
 				oThumb.obj.css(sDirection, iScroll / oScrollbar.ratio);
 				oContent.obj.css(sDirection, -iScroll);
-				
-				oEvent = $.event.fix(oEvent);
-				oEvent.preventDefault();
+				if( options.lockscroll || ( iScroll !== ( oContent[ options.axis ] - oViewport[ options.axis ] ) && iScroll !== 0 ) )
+                {
+					oEvent = $.event.fix(oEvent);
+					oEvent.preventDefault();
+				}
 			};
 		};
+		function up(oEvent){
+			if(!(oContent.ratio >= 1)){
+				timeout = setInterval(function(){
+					iScroll -= options.arrows;
+					iScroll = Math.min((oContent[options.axis] - oViewport[options.axis]), Math.max(0, iScroll));
+					oThumb.obj.css(sDirection, iScroll / oScrollbar.ratio);
+					oContent.obj.css(sDirection, -iScroll);
+
+					if( options.lockscroll || ( iScroll !== ( oContent[ options.axis ] - oViewport[ options.axis ] ) && iScroll !== 0 ) )
+	                {
+						oEvent = $.event.fix(oEvent);
+						oEvent.preventDefault();
+					}
+				},options.arrowsSpeed);
+			}
+		}
+		function down(oEvent){
+			if(!(oContent.ratio >= 1)){
+				timeout = setInterval(function(){
+					iScroll += options.arrows;
+					iScroll = Math.min((oContent[options.axis] - oViewport[options.axis]), Math.max(0, iScroll));
+					oThumb.obj.css(sDirection, iScroll / oScrollbar.ratio);
+					oContent.obj.css(sDirection, -iScroll);
+					if( options.lockscroll || ( iScroll !== ( oContent[ options.axis ] - oViewport[ options.axis ] ) && iScroll !== 0 ) )
+	                {
+						oEvent = $.event.fix(oEvent);
+						oEvent.preventDefault();
+					}
+				},options.arrowsSpeed);
+				
+			}
+		}
+		function endArrow(oEvent)
+		{
+			clearInterval(timeout);
+		}
 		function end(oEvent){
 			$(document).unbind('mousemove', drag);
 			$(document).unbind('mouseup', end);
 			oThumb.obj.unbind('mouseup', end);
 			document.ontouchmove = oThumb.obj[0].ontouchend = document.ontouchend = null;
+			clearInterval(timeout)
 			return false;
 		};
 		function drag(oEvent){
