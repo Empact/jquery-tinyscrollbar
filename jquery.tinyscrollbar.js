@@ -13,6 +13,7 @@
  */
 
 (function($){
+  'use strict';
   $.tiny = $.tiny || { };
 
   $.tiny.scrollbar = {
@@ -21,12 +22,20 @@
       wheel: 40,  //how many pixels must the mouswheel scroll at a time.
       scroll: true, //enable or disable the mousewheel;
       size: 'auto', //set the size of the scrollbar to auto or a fixed number.
-      sizethumb: 'auto' //set the size of the thumb to auto or a fixed number.
+      sizethumb: 'auto', //set the size of the thumb to auto or a fixed number.
+      selectors: {
+        viewport: 'viewport',
+        content: 'overview',
+        scrollbar: 'scrollbar',
+        track: 'track',
+        thumb: 'thumb',
+        end: 'end'
+      }
     }
   };
 
   $.fn.tinyscrollbar = function(options) {
-    var options = $.extend({}, $.tiny.scrollbar.options, options);
+    var options = $.extend(true, {}, $.tiny.scrollbar.options, options);
     this.each(function(){ $(this).data('tsb', new Scrollbar($(this), options)); });
     return this;
   };
@@ -35,34 +44,50 @@
   function Scrollbar(root, options){
     var self = this;
     var wrapper = root;
-    var viewport = $('.viewport', root);
-    var content = $('.overview', root);
-    var scrollbar = $('.scrollbar', root);
-    var track = $('.track', scrollbar);
-    var thumb = $('.thumb', scrollbar);
+    requirements_met() || meet_requirements();
+    var viewport = $('.'+ options.selectors.viewport, root);
+    var content = $('.'+ options.selectors.content, root);
+    var scrollbar = $('.'+ options.selectors.scrollbar, root);
+    var track = $('.'+ options.selectors.track, scrollbar);
+    var thumb = $('.'+ options.selectors.thumb, scrollbar);
     var xAxis = options.axis == 'x',
         cssDirection = xAxis ? 'left' : 'top',
         sSize = xAxis ? 'Width' : 'Height';
     var iScroll, scrollSize, offscreenSize, scrollbarRatio, iPosition = { start: 0, now: 0 }, iMouse = {};
 
+    function requirements_met() {
+      return (
+        $('.'+ options.selectors.viewport, root).length
+        && $('.'+ options.selectors.content, root).length
+        && $('.'+ options.selectors.scrollbar, root).length
+        && $('.'+ options.selectors.track, '.'+ options.selectors.scrollbar).length
+        && $('.'+ options.selectors.thumb, '.'+ options.selectors.scrollbar).length
+      );
+    }
+    function meet_requirements() {
+      var div = $('<div />');
+      wrapper.children().wrapAll(div.clone().addClass(options.selectors.viewport)).wrapAll(div.clone().addClass(options.selectors.content));
+      wrapper.prepend(
+        div.clone().addClass(options.selectors.scrollbar).append(
+          div.clone().addClass(options.selectors.track).append(
+            div.clone().addClass(options.selectors.thumb).append(
+              div.clone().addClass(options.selectors.end)
+            )
+          )
+        )
+      );
+    }
+
     this.active = function() {
       return self.contentRatio < 1;
     }
-    function requirements_met() {
-      return (viewport.length && content.length && scrollbar.length && track.length && thumb.length)
-    }
 
     function initialize() {
-      if (requirements_met()) {
-        self.update();
-        setEvents();
-      }
+      self.update();
+      setEvents();
       return self;
     }
     this.update = function(sScroll){
-      if (!requirements_met()) {
-        $.error("Missing required tinyscrollbar sub-element: either .viewport .overview .scrollbar .track or .thumb");
-      }
       var viewportSize = viewport[0]['offset'+ sSize];
       var contentSize = content[0]['scroll'+ sSize];
       offscreenSize = contentSize - viewportSize;
@@ -97,7 +122,7 @@
         return false;
       };
       track.bind('mouseup', drag);
-      if(options.scroll && this.addEventListener){
+      if(options.scroll && window.addEventListener){
         wrapper[0].addEventListener('DOMMouseScroll', wheel, false);
         wrapper[0].addEventListener('mousewheel', wheel, false );
       }
